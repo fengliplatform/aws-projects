@@ -1,0 +1,112 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "DynamoDB Global Table",
+    "Metadata" : {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Lable": {
+                        "default": "DynamoDB Global Table Base Configurations"
+                    },
+                    "Parameters": ["TableName", "PrimaryRegionKmsKeyId", "ReplicaRegion", "ReplicaRegionKmsKeyId"]
+                }
+            ],
+            "ParameterLabels": {
+                "TableName": {
+                    "default": "Input Global Table Name"
+                },
+                "PrimaryRegionKmsKeyId": {
+                    "default": "Specify KMS KeyID in Primary Region"
+                },
+                "ReplicaRegion": {
+                    "default": "Choose Replica Region"
+                },
+                "ReplicaRegionKmsKeyId": {
+                    "default": "Specify KMS KeyID in Replica Region"
+                }
+            }
+        }
+    },
+    "Parameters": {
+        "TableName": {
+            "Type": "String",
+            "Description": "DynamoDb Global Table Name",
+            "Default": "my_global_table"
+        },
+        "PrimaryRegionKmsKeyId": {
+            "Type": "String",
+            "AllowedPattern": ".+",
+            "Description": "KmsKeyId in Primary Region"
+        },
+        "ReplicaRegion": {
+            "Type": "String",
+            "Description": "Replica Region",
+            "AllowedValues": ["us-east-1", "us-east-2", "us-west-1", "us-west-2"]
+        },
+        "ReplicaRegionKmsKeyId": {
+            "Type": "String",
+            "AllowedPattern": ".+",
+            "Description": "KmsKeyId in Replica Region"
+        }
+    },
+    "Resources": {
+        "MyDynamoDBGlobalTable": {
+            "Type": "AWS::DynamoDB::GlobalTable",
+            "Properties": {
+                "TableName": {
+                    "Ref": "TableName"
+                },
+                "SSESpecification": {
+                    "SSEEnabled" : true,
+                    "SSEType" : "KMS"
+                },
+                "BillingMode": "PAY_PER_REQUEST",
+                "StreamSpecification": {
+                    "StreamViewType": "NEW_AND_OLD_IMAGES"
+                },
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "ID",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "ID",
+                        "KeyType": "HASH"
+                    }
+                ],
+                "Replicas": [
+                    {
+                        "Region": {
+                            "Ref": "AWS::Region"
+                        },
+                        "SSESpecification": {
+                            "KMSMasterKeyId": {
+                                "Ref": "PrimaryRegionKmsKeyId"
+                            }
+                        }
+                    },
+                    {
+                        "Region": {
+                            "Ref": "ReplicaRegion"
+                        },
+                        "SSESpecification": {
+                            "KMSMasterKeyId": {
+                                "Ref": "ReplicaRegionKmsKeyId"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "GlobalTableName": {
+            "Description": "Global table Name",
+            "Value": {
+                "Ref": "MyDynamoDBGlobalTable"
+            }
+        }
+    }
+}
